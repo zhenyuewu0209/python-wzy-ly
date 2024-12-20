@@ -152,7 +152,9 @@ set_mode(resolution=(0,0), flags=0, depth=0) -> Surface
 定义一些游戏中的变量/常量
 * 变量score用来记录游戏过程积攒的分数
 * color_***是血条的颜色设置，不同类型的敌人、常规血量的操作者以及低血量的操作者有不同的血条颜色
-* FRAME_PER_SEC是规定的帧率（图1）
+* FRAME_PER_SEC是规定的帧率（图1）  
+
+
 ![image](https://github.com/user-attachments/assets/94e12c3f-205f-471d-9ebc-1d6a283536a1)
 ![image](https://github.com/user-attachments/assets/f58ac8ba-94d4-4f61-946d-7a85c998b40b)
 
