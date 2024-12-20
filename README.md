@@ -242,7 +242,7 @@ set_timer() 方法会每隔这个时间间隔触发一次 CREATE_ENEMY_EVENT 事
   * 游戏启动时首先调用该开始界面，当用户选择开始游戏，则进入游戏主体，游戏正式执行
   * ![E9ISU@%6E3 _J443LW4QH9](https://github.com/user-attachments/assets/ec91f616-a8c6-43e2-9c34-9cf3f09b270e)
 * 击杀敌人的统计功能
-  * 该功能起初的设计思路是将击杀特定敌人放在游戏主体main中判断，当击杀特定敌人后，就将该数值返回给定义好的变量存储
+  * 该功能起初的设计思路是将击杀特定敌人放在游戏主体main中判断，当击杀特定敌人后，就将该数值返回给定义好的字典存储
   * 但在实际运行过程中发现，main中的更新并非为实时的，因此在最终显示杀敌统计时，经常会少于实际杀敌数
   * 也考虑过重新编写更新部分代码，但由于其一更新代码庞杂，分布在main中各个部分，容易造成代码错误，其二过快的更新帧率对于用户是没有实质上的体验提升，同时还会占据电脑内存，尽管本游戏较小不会有太大影响，但对于大型游戏还是不合理的
   * 综合以上因素，又联想到杀敌数总是与总分是相对应的，因此只要将定义的杀敌数，使用和score同样的判决条件，在原来的精灵中加上kill_stats这一属性即可，通过value来判断击杀敌人的类型
@@ -256,3 +256,960 @@ set_timer() 方法会每隔这个时间间隔触发一次 CREATE_ENEMY_EVENT 事
 * 其次，是对于python本身的。通过解读源码、拓展原来的功能，我们了解到python与其相关插件pycharm、anaconda之间的关系，学会了如何利用上述插件去配置虚拟环境，并导入相关依赖。直观感受到了python是一门面向对象的编程语言，通过类的派生、继承等赋予某一对象独特的属性和方法，并对这些方法进行操作，从而达成指定功能的实现。python具有庞大的开发环境和开源网络，这为python这门语言赋予了十足的发展空间，目前python也是公认的机器学习所必须要掌握的语言之一，与我们未来的专业方向选择不谋而合，通过这门课程和大作业我们对于python从一无所知到了有所涉猎，相信在未来，我们会掌握更多python的开发功能，扬帆起航。
 
   
+## 代码
+import sys
+import pygame
+pygame.init()
+from plane_sprites import *
+#在 Python 中，from plane_sprites import * 是一种 导入语句，用于从一个模块中导入所有的内容（类、函数、变量等）。
+# 具体来说，plane_sprites 是一个 Python 模块或文件，而 * 表示将该模块中所有公开的元素导入到当前的命名空间中。
+# **************************************************************
+
+# FileName: plane_main.py***************************************
+# First Author:  Junieson *********************************************
+# zhenyuewu0209、jinyunyijiu use for reference
+# Version:  2024.12.20 ******************************************
+# ****************************************************************
+class PlaneGame(object):
+    #是 Python 中定义一个名为 PlaneGame 的类的语句。
+    # 这个类继承自 object 类（所有类在 Python 中默认都会继承 object 类，除非显式地继承其他类）。
+    """飞机大战主游戏"""
+    def __init__(self):
+        print("游戏初始化")
+        # 1. 创建游戏的窗口
+        self.screen = pygame.display.set_mode(SCREEN_RECT.size)#pygame自带
+        # 创建结束界面
+        self.canvas_over = CanvasOver(self.screen)#plane_sprites中定义
+        # 2. 创建游戏的时钟
+        self.clock = pygame.time.Clock()#pygame自带
+        # 3. 调用私有方法，精灵和精灵组的创建
+        self.__create_sprites()
+        # 分数对象
+        self.score = GameScore()
+        # 程序控制指针
+        self.index = 0
+        # 音乐bgm
+        self.bg_music = pygame.mixer.Sound("./music/game_music.ogg")#创建一个pygame.mixer.Sound类的对象self.bg_music
+        self.bg_music.set_volume(0.3)
+        self.bg_music.play(-1)#调用了pygame.mixer.Sound的方法，制定播放循环次数，-1表示无限循环
+        # 游戏结束了吗
+        self.game_over = False
+        # 4. 设置定时器事件 - 创建敌机　1s
+        pygame.time.set_timer(CREATE_ENEMY_EVENT, random.randint(1000, 2000))
+        #set_timer() 方法会每隔这个时间间隔触发一次 CREATE_ENEMY_EVENT 事件。
+        pygame.time.set_timer(HERO_FIRE_EVENT, 400)
+        pygame.time.set_timer(BUFF1_SHOW_UP, random.randint(10000, 20000))
+        pygame.time.set_timer(BUFF2_SHOW_UP, random.randint(20000, 40000))
+        pygame.time.set_timer(ENEMY_FIRE_EVENT, 2000)
+
+        #改进
+        self.start_screen = CanvasStart(self.screen)
+        kill_stats = {"Enemy1": 0, "Enemy2": 0, "Boss": 0}
+        #改进
+
+    def __create_sprites(self):
+
+        # 创建背景精灵和精灵组
+        bg1 = Background()
+        bg2 = Background(True)
+
+        self.back_group = pygame.sprite.Group(bg1, bg2)
+        #定义这些类，是为了方便存储在游戏进行中产生的数据，统一管理，游戏结束后释放内存
+        # 创建敌机的精灵组
+        self.enemy_group = pygame.sprite.Group()
+
+        # 创建英雄的精灵和精灵组
+        self.hero = Hero()
+        self.hero_group = pygame.sprite.Group(self.hero)
+
+        # 创建敌军子弹组
+        self.enemy_bullet_group = pygame.sprite.Group()
+
+        # 血条列表
+        self.bars = []
+        self.bars.append(self.hero.bar)
+
+        # 创建buff组
+        self.buff1_group = pygame.sprite.Group()
+
+        # 创建假象boom组
+        self.enemy_boom = pygame.sprite.Group()
+
+        # bomb列表
+        self.bombs = []
+
+    def start_game(self):
+        print("游戏开始...")
+
+        while True:
+            # 1. 设置刷新帧率
+            self.clock.tick(FRAME_PER_SEC)
+            # 2. 事件监听
+            self.__event_handler()
+            #这个方法名的前两个下划线（__）通常意味着这个方法是 私有的，即该方法是供类内部使用的，不应该被外部直接调用。
+            # 3. 碰撞检测
+            self.__check_collide()
+            # 4. 更新/绘制精灵组
+            self.__update_sprites()
+
+            # 是否要结束游戏
+
+            if self.game_over:
+                self.canvas_over.update()
+
+            # 5. 更新显示
+            pygame.display.update()
+            #是 Pygame 中的一个方法，用于 更新屏幕，即将你所绘制的内容（例如图形、文本、背景等）显示到屏幕上。
+
+
+            # 改进
+            if self.game_over:
+                global kill_stats
+                self.canvas_over.set_stats(kill_stats)
+                self.canvas_over.update()
+            # 改进
+
+    def __event_handler(self):  # 事件检测
+
+        if self.score.getvalue() > 200+500*self.index:
+            self.boss = Boss()
+            self.enemy_group.add(self.boss)#add继承自pygame.sprite.Group
+            self.bars.append(self.boss.bar)
+            self.index += 1
+
+        for event in pygame.event.get():
+            # 判断是否退出游戏
+            if event.type == pygame.QUIT:
+                #pygame自带
+                pygame.quit()
+                sys.exit()
+            if event.type == CREATE_ENEMY_EVENT:
+                # 创建敌机精灵将敌机精灵添加到敌机精灵组
+                if self.score.getvalue() < 20:
+                    enemy = Enemy()
+                else:
+                    if random.randint(0, 100) % 4:
+                        #在这行代码中，random.randint(0, 100)会返回一个0到100之间的整数，包含0和100。
+                        enemy = Enemy()
+                    else:
+                        enemy = Enemy(2)
+
+                self.enemy_group.add(enemy)
+                self.bars.append(enemy.bar)
+
+            elif event.type == HERO_FIRE_EVENT:
+                for hero in self.hero_group:
+                    hero.fire()#只要游戏进行，hero开火持续
+            elif event.type == BUFF1_SHOW_UP:
+                buff1 = Buff1()
+                self.buff1_group.add(buff1)
+            elif event.type == BUFF2_SHOW_UP:
+                if self.hero.bar.color == color_red:#按需分配，buff2根据血量需求可以是炸弹或者血包
+                    buff = Buff3()
+                else:
+                    buff= Buff2()
+                self.buff1_group.add(buff)
+            elif event.type == ENEMY_FIRE_EVENT:
+                for enemy in self.enemy_group:
+                    if enemy.number >= 2:
+                        enemy.fire()
+                        for bullet in enemy.bullets:
+                            self.enemy_bullet_group.add(bullet)
+            elif event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
+                #判断空格键是否触发
+                self.bomb_throw()
+            else:
+                if self.game_over == True:
+                    flag = self.canvas_over.event_handler(event)#调用canvas_over里面的event_handler，根据触发位置返回0或1
+                    if flag == 1:
+                        self.__start__()
+                    elif flag == 0:
+                        pygame.quit()
+                        sys.exit()
+
+        # 使用键盘提供的方法获取键盘按键 - 按键元组
+        keys_pressed = pygame.key.get_pressed()
+        # 判断元组中对应的按键索引值 1
+        if keys_pressed[pygame.K_RIGHT]:
+            self.heros_move(5)
+        elif keys_pressed[pygame.K_LEFT]:
+            self.heros_move(-5)
+        elif keys_pressed[pygame.K_UP]:
+            self.heros_move(0, -5)
+        elif keys_pressed[pygame.K_DOWN]:
+            self.heros_move(0, 5)
+        else:
+            self.heros_move(0, 0)
+
+    def heros_move(self, x=0, y=0):
+        self.hero.speedx = x
+        self.hero.speedy = y
+
+    def bomb_throw(self):
+        music_use_bomb = pygame.mixer.Sound("./music/use_bomb.wav")
+        if self.hero.bomb > 0:
+            music_use_bomb.play()
+            self.hero.bomb -= 1
+            self.bombs.pop()
+            for enemy in self.enemy_group:
+                if enemy.number < 3:
+                    enemy.bar.length = 0
+                    enemy.isboom = True
+                else:
+                    enemy.injury = 20
+                    enemy.isboom = True#这里是为了启动BOSS的扣血，不是爆炸，见源代码
+
+    def __check_collide(self):
+
+        # 1. 子弹摧毁敌机
+        for enemy in self.enemy_group:
+            for hero in self.hero_group:
+                for bullet in hero.bullets:
+                    if pygame.sprite.collide_mask(bullet, enemy):  # 这种碰撞检测可以精确到像素去掉alpha遮罩的那种哦
+                        #这是pygame自带的
+                        bullet.kill()
+                        enemy.injury = bullet.hity#Bullet自带的属性，color伤害
+                        enemy.isboom = True
+                        if enemy.bar.length <= 0:
+                            # #改进
+                            # if enemy.number == 1:
+                            # if enemy.bar.value == 2:  # 普通敌人
+                            #     self.kill_stats["Enemy1"] += 1
+                            # elif enemy.bar.value == 4:  # 加强敌人
+                            #     self.kill_stats["Enemy2"] += 1
+                            # else:  # BOSS
+                            #     self.kill_stats["Boss"] += 1
+                            #     #改进
+                            self.enemy_group.remove(enemy)
+                            self.enemy_boom.add(enemy)
+
+        # 2. 敌机撞毁英雄
+        for enemy in self.enemy_group:
+            if pygame.sprite.collide_mask(self.hero, enemy):
+                if enemy.number < 3:
+                    enemy.bar.length = 0  # 敌机直接死
+                    self.hero.injury = self.hero.bar.value / 4  # 英雄掉四分之一的血
+                    if self.hero.buff1_num > 0:
+                        self.hero.buff1_num -= 1
+                        self.hero.music_degrade.play()
+                    self.enemy_group.remove(enemy)
+                    self.enemy_boom.add(enemy)
+                    enemy.isboom = True
+                else:
+                    self.hero.bar.length = 0
+                self.hero.isboom = True
+
+        # 子弹摧毁英雄
+        for bullet in self.enemy_bullet_group:
+            if pygame.sprite.collide_mask(self.hero, bullet):
+                bullet.kill()
+                self.hero.injury = 1
+                if self.hero.buff1_num > 0:
+                    self.hero.music_degrade.play()
+                    if self.hero.buff1_num == 5:
+                        self.mate1.kill()
+                        self.mate2.kill()
+                    self.hero.buff1_num -= 1
+
+                self.hero.isboom = True
+
+        if not self.hero.alive():
+            self.hero.rect.right = -10  # 把英雄移除屏幕
+            if self.hero.buff1_num == 5:
+                self.mate1.rect.right = -10
+                self.mate2.rect.right = -10
+            self.game_over = True
+#2024.12.07
+        # 3.buff吸收
+        for buff in self.buff1_group:
+            if pygame.sprite.collide_mask(self.hero, buff):
+                buff.music_get.play()
+                if buff.speedy == 1:  # 用速度来区分
+                    if self.hero.buff1_num < 6:
+                        self.hero.buff1_num += 1
+                        self.hero.music_upgrade.play()
+                        if self.hero.buff1_num == 5:
+                            self.team_show()
+
+                elif buff.speedy==2:#明显炸弹相对屏幕移动，buff1相对屏幕不动
+                    self.hero.bomb += 1
+                    image = pygame.image.load("./images/bomb.png")
+                    self.bombs.append(image)
+                elif buff.speedy==3:
+                    if self.hero.bar.length < self.hero.bar.weight*self.hero.bar.value:
+                        self.hero.bar.length += self.hero.bar.weight*self.hero.bar.value
+                        #设计有误，实测发现血量可能会超过能显示的值
+                buff.kill()
+
+    def team_show(self):
+        self.mate1 = Heromate(-1)
+        self.mate2 = Heromate(1)
+        self.mate1.image = pygame.image.load("./images/life.png")
+        self.mate1.rect = self.mate1.image.get_rect()
+        self.mate2.image = pygame.image.load("./images/life.png")
+        self.mate2.rect = self.mate2.image.get_rect()
+        self.hero_group.add(self.mate1)
+        self.hero_group.add(self.mate2)
+
+    # 各种更新
+    def __update_sprites(self):
+
+        self.back_group.update()
+        self.back_group.draw(self.screen)
+
+        self.enemy_group.update()
+        self.enemy_group.draw(self.screen)
+
+        self.enemy_boom.update()
+        self.enemy_boom.draw(self.screen)
+
+        self.heros_update()
+        self.hero_group.draw(self.screen)
+
+        for hero in self.hero_group:
+            hero.bullets.update()
+            hero.bullets.draw(self.screen)
+
+        self.buff1_group.update()
+        self.buff1_group.draw(self.screen)
+
+        self.bars_update()
+        self.bombs_update()
+
+        self.enemy_bullet_group.update()
+        self.enemy_bullet_group.draw(self.screen)
+
+        self.score_show()
+
+    def heros_update(self):
+        for hero in self.hero_group:
+            if hero.number == 1:
+                hero.rect.bottom = self.hero.rect.bottom
+                hero.rect.left = self.hero.rect.right
+            if hero.number == -1:
+                hero.rect.bottom = self.hero.rect.bottom
+                hero.rect.right = self.hero.rect.left
+            hero.update()
+
+    def bars_update(self):
+        for bar in self.bars:
+            if bar.length > 0:
+                bar.update(self.screen)#传递的参数是画布，即作画背景
+            else:
+                self.bars.remove(bar)
+
+    def bullet_enemy_update(self):
+        for enemy in self.enemy_group:
+            enemy.bullets.update()
+            enemy.bullets.draw(self.screen)
+
+    def bombs_update(self):
+        i = 1
+        for bomb in self.bombs:
+            self.screen.blit(bomb, (0, 700 - (bomb.get_rect().height) * i))
+            #存储的炸弹在屏幕上的绘制
+            i += 1
+
+    def score_show(self):
+        score_font = pygame.font.Font("./STCAIYUN.ttf", 33)#pygame自带的函数，创建字体和大小
+        image = score_font.render("SCORE:" + str(int(self.score.getvalue())), True, color_gray)
+        #score_font.render(text, antialias, color) 是 Pygame 中用于渲染文本为图像的方法。
+        rect = image.get_rect()
+        rect.bottom, rect.right = 700, 480
+        self.screen.blit(image, rect)
+        #self.screen.blit(image, rect) 是将渲染的文本图像绘制到屏幕上的方法。
+
+    # @staticmethod
+    #@staticmethod 是 Python 中的一个装饰器，表示该方法是 静态方法。
+    #静态方法与实例方法不同，它不需要访问类的实例（不需要 self 参数），可以直接通过类调用。
+    #静态方法通常用于执行不依赖于实例属性和方法的功能。它是属于类的，而不是类的实例。
+    # def __start__():
+    #     # 创建游戏对象
+    #     game = PlaneGame()
+    #
+    #     # 启动游戏
+    #     game.start_game()
+
+          #改进
+    @staticmethod
+    def __start__():
+        # 创建游戏对象
+        game = PlaneGame()
+
+        # 显示开始界面
+        while True:
+            game.start_screen.update()
+            pygame.display.update()
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    pygame.quit()
+                    sys.exit()
+                if game.start_screen.event_handler(event):
+                    game.start_game()
+          #改进
+
+
+
+
+
+if __name__ == '__main__':
+    PlaneGame.__start__()
+    #这行代码用于判断当前脚本是否作为主程序运行。__name__ 是一个内置变量，它指示当前模块的名称。
+    #如果脚本是被直接运行的（而不是被导入为模块），__name__ 会被设置为 '__main__'，
+    # 此时 if 语句为真，程序会执行 PlaneGame.__start__()。
+   #如果脚本被导入为模块（而不是直接运行），则 __name__ 不会是 '__main__'，if 语句不执行。
+
+# #2024.12.09
+
+
+import random
+import pygame
+pygame.init()
+# **************************************************************
+# FileName: plane_sprites.py***************************************
+# First Author:  Junieson *********************************************
+# zhenyuewu0209、jinyunyijiu use for reference
+# Version:  2024.12.20 ******************************************
+# ****************************************************************
+# 分数
+kill_stats = {"Enemy1": 0, "Enemy2": 0, "Boss": 0}
+
+SCORE = 0
+# 屏幕大小的常量
+SCREEN_RECT = pygame.Rect(0, 0, 480, 700)
+# color
+color_blue = (0, 0, 0)
+color_green = (0, 0, 0)
+color_red = (255, 0, 0)
+color_purple = (148, 0, 211)
+color_gray = (251, 255, 242)
+# 刷新的帧率
+FRAME_PER_SEC = 60  # 刷新率是60hz,即每秒update60次
+# 创建敌机的定时器常量,自定义用户事件,其实就是int数,不同数表示不同事件
+# pygame.USEREVENT 是 Pygame 提供的一个常量，表示用户自定义事件的起始编号，通过加上一个偏移值（如 +1）来避免与系统事件冲突。
+CREATE_ENEMY_EVENT = pygame.USEREVENT
+# 英雄发射子弹事件
+HERO_FIRE_EVENT = pygame.USEREVENT + 1
+# buff1 出现的事件
+BUFF1_SHOW_UP = pygame.USEREVENT + 2
+# buff2
+BUFF2_SHOW_UP = pygame.USEREVENT + 3
+# 敌军发射子弹
+ENEMY_FIRE_EVENT = pygame.USEREVENT + 4
+# 发射炸弹
+BOMB_THROW = pygame.USEREVENT + 5
+
+
+class GameScore(object):
+    global SCORE
+
+    def __init__(self):
+        self.score = 0
+
+        pass
+
+    def getvalue(self):
+        self.score = SCORE
+        return self.score
+
+
+
+class GameSprite(pygame.sprite.Sprite):
+    """飞机大战游戏精灵"""
+
+#若不定义，默认speedy=1，即任何不定义速度的物体会以1在y上变化
+    def __init__(self, image_name, speedy=1, speedx=0):
+        # 调用父类的初始化方法
+        super().__init__()
+
+        # 定义对象的属性
+        self.image = pygame.image.load(image_name)
+        self.rect = self.image.get_rect()
+        self.speedy = speedy
+        self.speedx = speedx
+        self.injury = 1
+        self.index = 0  # 记帧数变量
+        self.bar = bloodline(color_blue, self.rect.x, self.rect.y - 0, self.rect.width)
+
+    def update(self):
+        # 在屏幕的垂直方向上移动
+        self.rect.y += self.speedy
+        self.rect.x += self.speedx
+        self.bar.x = self.rect.x
+        self.bar.y = self.rect.y - 10
+
+
+class Background(GameSprite):
+    """游戏背景精灵"""
+
+    def __init__(self, is_alt=False):
+
+        # 1. 调用父类方法实现精灵的创建(image/rect/speed)
+        super().__init__("./images/background.png")
+
+        # 2. 判断是否是交替图像，如果是，需要设置初始位置
+        if is_alt:
+            self.rect.y = -self.rect.height
+
+    def update(self):
+
+        # 1. 调用父类的方法实现
+        super().update()
+
+        # 2. 判断是否移出屏幕，如果移出屏幕，将图像设置到屏幕的上方
+        if self.rect.y >= SCREEN_RECT.height:
+            self.rect.y = -self.rect.height
+
+
+class Boss(GameSprite):
+
+    def __init__(self):
+        super().__init__("./images/enemy3_n1.png", 0, 1)
+        self.music_boom = pygame.mixer.Sound("./music/enemy3_down.wav")
+        self.music_fly = pygame.mixer.Sound("./music/enemy3_flying.wav")
+        self.music_fly.play(-1)
+        self.rect.centerx = 240
+        self.y = 200
+        self.isboom = False
+        self.number = 3
+        self.index1 = 1  # 控制动画速度
+        self.index2 = 0
+        self.index3 = 0
+        self.index4 = 0
+        self.injury = 1
+        self.bar = bloodline(color_purple, 0, 0, 480, 8, 200)
+        self.bullets = pygame.sprite.Group()
+
+        global kill_stats
+
+    def fire(self):
+            for j in range(2, 7):  # 每层5个
+                bullet = Bullet(0, 1)
+                bullet.injury = 1
+                # 2. 设置精灵的位置
+                bullet.rect.centerx = self.rect.centerx
+                bullet.rect.y = self.rect.bottom
+                if j == 2:
+                    bullet.speedx = 0
+                else:
+                    bullet.speedx = (-1) ** j * ((j - 1) // 2) * 1
+
+                self.bullets.add(bullet)
+
+    def update(self):
+        # 左右移
+        global SCORE
+        global kill_stats
+        if self.index4 % 2 == 0:  # 降低帧速率,注意这两个指针不能一样
+            # 内部为左右移动大概50像素
+            if self.index3 % 50 == 0 and (self.index3 // 50) % 2 == 1:
+                self.speedx = -self.speedx
+            self.rect.x += self.speedx
+            self.index3 += 1
+        self.index4 += 1
+
+        # 发电动画
+        self.image = pygame.image.load("./images/enemy3_n" + str((self.index1 // 6) % 2 + 1) + ".png")#用来切换enemy_n1和_n2两张图片
+        self.index1 += 1
+
+        # 爆炸动画
+        if self.isboom:
+            self.bar.length -= self.injury * self.bar.weight
+            if self.bar.length <= 0:  # 此时满足爆炸的条件了
+                self.music_fly.stop()
+                if self.index2 == 0:
+                    self.music_boom.play()
+                if self.index2 < 29:  # 4*7+1
+                    self.image = pygame.image.load("./images/enemy3_down" + str(self.index2 // 7) + ".png")
+                    # 这个地方之所以要整除4是为了减慢爆炸的速度，如果按照update的频率60hz就太快了
+                    self.index2 += 1
+                else:
+                    self.kill()
+                    SCORE += self.bar.value
+                    # 改进
+                    if self.bar.value == 2:
+                        kill_stats["Enemy1"] += 1
+                    if self.bar.value == 4:
+                        kill_stats["Enemy2"] += 1
+                    if self.bar.value == 8:
+                        kill_stats["Boss"] += 1
+                    # 改进
+            else:
+                self.isboom = False  # 否则还不能死
+
+
+class Enemy(GameSprite):
+    """敌机精灵"""
+
+    def __init__(self, num=1):
+        self.number = num
+        # 1. 调用父类方法，创建敌机精灵，同时指定敌机图片
+        super().__init__("./images/enemy" + str(num) + ".png")
+
+        # music
+        if num == 1:
+            self.music_boom = pygame.mixer.Sound("./music/enemy1_down.wav")
+        else:
+            self.music_boom = pygame.mixer.Sound("./music/enemy2_down.wav")
+        # 2. 指定敌机的初始随机速度 1 ~ 3
+        self.speedy = random.randint(1, 3)
+
+        # 3. 指定敌机的初始随机位置
+        self.rect.bottom = 0
+        max_x = SCREEN_RECT.width - self.rect.width#敌机也是张方形图片，用屏幕长度减去敌机长度
+        self.rect.x = random.randint(0, max_x)
+
+        # 4.爆炸效果
+        self.isboom = False
+        self.index = 0
+
+        # 5.血条
+        if self.number == 1:
+            self.bar = bloodline(color_blue, self.rect.x, self.rect.y, self.rect.width)
+        else:
+            self.bar = bloodline(color_blue, self.rect.x, self.rect.y, self.rect.width, 3, 4)
+
+        # 6,子弹
+        self.bullets = pygame.sprite.Group()
+
+        global kill_stats
+
+    def fire(self):
+        for i in range(0, 2):
+            # 1. 创建子弹精灵
+            bullet = Bullet(0, random.randint(self.speedy + 1, self.speedy + 3))
+            # 2. 设置精灵的位置
+            bullet.rect.bottom = self.rect.bottom + i * 20
+            bullet.rect.centerx = self.rect.centerx
+
+            # 3. 将精灵添加到精灵组
+            self.bullets.add(bullet)
+#2024.12.4
+    def update(self):
+        global SCORE
+        global kill_stats
+        # 1. 调用父类方法，保持垂直方向的飞行
+        super().update()
+
+        # 2. 判断是否飞出屏幕，如果是，需要从精灵组删除敌机
+        if self.rect.y > SCREEN_RECT.height:
+            # print("飞出屏幕，需要从精灵组删除...")
+            # kill方法可以将精灵从所有精灵组中移出，精灵就会被自动销毁
+            self.kill()
+            self.bar.length = 0
+
+        if self.isboom:
+            self.bar.length -= self.bar.weight * self.injury
+            if self.bar.length <= 0:
+                if self.index == 0:  # 保证只响一次
+                    self.music_boom.play()#已经定义过的方法
+                if self.index < 17:  # 4*4+1
+                    self.image = pygame.image.load(
+                        "./images/enemy" + str(self.number) + "_down" + str(self.index // 4) + ".png")
+                    # 这个地方之所以要整除4是为了减慢爆炸的速度，如果按照update的频率60hz就太快了
+                    self.index += 1
+                else:
+                    self.kill()
+                    SCORE += self.bar.value
+                    #改进
+                    if self.bar.value == 2:
+                        kill_stats["Enemy1"] += 1
+                    if self.bar.value == 4:
+                        kill_stats["Enemy2"] += 1
+                    if self.bar.value == 200:
+                        kill_stats["Boss"] += 1
+                    # 改进
+                    #实际上只用保留对应项就可以，没必要对每个情况都判断，下同
+
+            else:
+                self.isboom = False
+
+
+class Hero(GameSprite):
+    """英雄精灵"""
+
+    def __init__(self):
+        # 1. 调用父类方法，设置image&speed
+        super().__init__("./images/me1.png")
+        self.music_down = pygame.mixer.Sound("./music/me_down.wav")
+        self.music_upgrade = pygame.mixer.Sound("./music/upgrade.wav")
+        self.music_degrade = pygame.mixer.Sound("./music/supply.wav")
+
+        self.number = 0#可能用来定义种类
+        # 2. 设置英雄的初始位置
+        self.rect.centerx = SCREEN_RECT.centerx
+        self.rect.bottom = SCREEN_RECT.bottom - 120#确实是
+
+        # 3. 创建子弹的精灵组
+        self.bullets = pygame.sprite.Group()
+        # 4.爆炸
+        self.isboom = False
+        self.index1 = 1  # 控制动画速度
+        self.index2 = 0
+        # 5.buff1加成
+        self.buff1_num = 0
+        # 6,英雄血条
+        self.bar = bloodline(color_green, 0, 700, 480, 8, 10)
+        # 7，炸弹数目
+        self.bomb = 0
+
+    def update(self):
+
+        # 英雄在水平方向移动和血条不同步,特殊
+        self.rect.y += self.speedy
+        self.rect.x += self.speedx
+
+        # 控制英雄不能离开屏幕
+        if self.rect.x < 0:
+            self.rect.x = 0
+        elif self.rect.right > SCREEN_RECT.right:
+            self.rect.right = SCREEN_RECT.right
+        elif self.rect.y < 0:
+            self.rect.y = 0
+        elif self.rect.bottom > SCREEN_RECT.bottom:
+            self.rect.bottom = SCREEN_RECT.bottom
+
+        # 英雄喷气动画
+
+        self.image = pygame.image.load("./images/me" + str((self.index1 // 6) % 2 + 1) + ".png")
+        self.index1 += 1
+
+        # 英雄爆炸动画
+        if self.isboom:
+            self.bar.length -= self.injury * self.bar.weight
+            if self.bar.length <= 0:  # 此时满足爆炸的条件了
+                if self.index2 == 0:
+                    self.music_down.play()
+                if self.index2 < 17:  # 4*4+1
+                    self.image = pygame.image.load("./images/me_destroy_" + str(self.index2 // 4) + ".png")
+                    # 这个地方之所以要整除4是为了减慢爆炸的速度，如果按照update的频率60hz就太快了
+                    self.index2 += 1
+                else:
+                    self.kill()
+            else:
+                self.isboom = False  # 否则还不能死
+
+    # 发射子弹
+    def fire(self):
+        if self.buff1_num == 0:
+            for i in range(0, 1):
+                # 1. 创建子弹精灵
+                bullet = Bullet()
+
+                # 2. 设置精灵的位置
+                bullet.rect.bottom = self.rect.y - i * 20
+                bullet.rect.centerx = self.rect.centerx
+
+                # 3. 将精灵添加到精灵组
+                self.bullets.add(bullet)
+        elif self.buff1_num <= 3:
+            for i in (0, 1):#两层
+                # 1. 创建子弹精灵
+                for j in range(2, self.buff1_num + 3):#每拿一个buff，每层加一个子弹
+                    bullet = Bullet(2, -3)
+                    # 2. 设置精灵的位置
+                    bullet.rect.bottom = self.rect.y - i * 20
+                    if (self.buff1_num % 2 == 1):
+                        bullet.rect.centerx = self.rect.centerx + (-1) ** j * 15 * (j // 2)
+                    if (self.buff1_num % 2 == 0):
+                        if j == 2:
+                            bullet.rect.centerx = self.rect.centerx
+                        else:
+                            bullet.rect.centerx = self.rect.centerx + (-1) ** j * 15 * ((j - 1) // 2)
+                    # 3. 将精灵添加到精灵组
+                    self.bullets.add(bullet)
+        elif self.buff1_num >= 4:
+            for i in range(0, 1):
+                # 1. 表示有几层
+                for j in range(2, 5):  # 每层三个
+
+                    bullet = Bullet(3, -3)
+                    bullet.injury = 2
+                    # 2. 设置精灵的位置
+                    bullet.rect.bottom = self.rect.y
+                    if j == 2:
+                        bullet.rect.centerx = self.rect.centerx
+                    else:
+                        bullet.rect.centerx = self.rect.centerx + (-1) ** j * (30 + 5 * i)
+                        bullet.speedx = (-1) ** j * (i + 1)
+                    self.bullets.add(bullet)
+
+#僚机
+class Heromate(Hero):
+    def __init__(self, num):
+        super().__init__()
+        self.image = pygame.image.load("./images/life.png")
+        self.number = num
+
+    def update(self):
+
+        if self.rect.right > SCREEN_RECT.right:
+            self.rect.right = SCREEN_RECT.right
+        if self.rect.x < 0:
+            self.rect.x = 0
+        if self.rect.y < 0:
+            self.rect.y = 0
+        elif self.rect.bottom > SCREEN_RECT.bottom:
+            self.rect.bottom = SCREEN_RECT.bottom
+
+    def fire(self):
+        for i in range(0, 1, 2):
+            # 1. 创建子弹精灵
+            bullet = Bullet()
+            # 2. 设置精灵的位置
+            bullet.rect.bottom = self.rect.y - i * 20
+            bullet.rect.centerx = self.rect.centerx
+            # 3. 将精灵添加到精灵组
+            self.bullets.add(bullet)
+
+
+class Bullet(GameSprite):
+    """子弹精灵"""
+
+    def __init__(self, color=1, speedy=-2, speedx=0):
+        # 调用父类方法，设置子弹图片，设置初始速度
+        self.hity = color  # 子弹伤害值
+        self.music_shoot = pygame.mixer.Sound("./music/bullet.wav")
+        self.music_shoot.set_volume(0.4)
+        if color > 0:  # 只让英雄发子弹响
+            self.music_shoot.play()
+        super().__init__("./images/bullet" + str(color) + ".png", speedy, speedx)
+
+    def update(self):
+        # 调用父类方法，让子弹沿垂直方向飞行
+        super().update()
+
+        # 判断子弹是否飞出屏幕
+        if self.rect.bottom < 0 or self.rect.y > 700:
+            self.kill()
+
+
+class Buff1(GameSprite):
+    def __init__(self):
+        super().__init__("./images/bullet_supply.png", 1)
+        self.music_get = pygame.mixer.Sound("./music/get_bullet.wav")
+        self.rect.bottom = 0
+        max_x = SCREEN_RECT.width - self.rect.width
+        self.rect.x = random.randint(0, max_x)
+
+    def update(self):
+        super().update()
+        if self.rect.bottom < 0:
+            self.kill()
+
+
+class Buff2(GameSprite):
+    def __init__(self):
+        super().__init__("./images/bomb_supply.png", 2)
+        self.music_get = pygame.mixer.Sound("./music/get_bomb.wav")
+        self.rect.bottom = random.randint(0, 700)
+        max_x = SCREEN_RECT.width - self.rect.width
+        self.rect.x = random.randint(0, max_x)
+        self.ran = random.randint(60, 180)  # 在持续1~3s后消失
+
+    def update(self):
+        super().update()
+        if self.rect.bottom < 0 or self.index == self.ran:
+            self.kill()
+        self.index += 1
+
+class Buff3(Buff2):
+    def __init__(self):
+        super().__init__()
+        self.image = pygame.image.load("./images/buff3.png")
+        self.speedy=3
+
+
+class bloodline(object):
+    def __init__(self, color, x, y, length, width=2, value=2):
+        self.color = color
+        self.x = x
+        self.y = y
+        self.length = length
+        self.width = width  # 线宽
+        self.value = value * 1.0  # 血量用浮点数
+        self.weight = length / value  # 每一滴血表示的距离
+        self.color_init = color
+
+    def update(self, canvas):
+        if self.length <= self.value * self.weight / 2:
+            self.color = color_red
+        else:
+            self.color = self.color_init
+        self.bar_rect = pygame.draw.line(canvas, self.color, (self.x, self.y), (self.x + self.length, self.y),
+                                         self.width)
+
+#2024.12.06
+class CanvasStart():
+    def __init__(self, screen):
+        self.img_title = pygame.image.load("./images/title.png")
+        self.img_start = pygame.image.load("./images/start.png")
+        self.rect_start = self.img_start.get_rect()
+        self.rect_title = self.img_title.get_rect()
+        self.rect_start.centerx = self.rect_title.centerx = SCREEN_RECT.centerx
+        self.rect_title.top = 0
+        self.rect_start.top = 550
+        self.screen = screen
+
+    def event_handler(self, event):
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            pos = pygame.mouse.get_pos()
+            if self.rect_start.left < pos[0] < self.rect_start.right and \
+                    self.rect_start.top < pos[1] < self.rect_start.bottom:
+                return True
+        return False
+
+    def update(self):
+        self.screen.blit(self.img_title, self.rect_title)
+        self.screen.blit(self.img_start, self.rect_start)
+
+
+
+
+class CanvasOver():
+    def __init__(self, screen):
+        self.img_again = pygame.image.load("./images/again.png")
+        self.img_over = pygame.image.load("./images/gameover.png")
+        self.rect_again = self.img_again.get_rect()
+        self.rect_over = self.img_over.get_rect()
+        self.rect_again.centerx = self.rect_over.centerx = SCREEN_RECT.centerx
+        self.rect_again.bottom = SCREEN_RECT.centery
+        self.rect_over.y = self.rect_again.bottom + 20
+        self.screen = screen
+        global kill_stats
+
+    def event_handler(self, event):
+        """处理鼠标点击事件，判断是否点击了重启或退出按钮"""
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            pos = pygame.mouse.get_pos()
+            if self.rect_again.collidepoint(pos):
+                # 点击“重新开始”按钮
+                return 1
+            elif self.rect_over.collidepoint(pos):
+                # 点击“退出”按钮
+                return 0
+
+    def update(self):
+        self.screen.blit(self.img_again, self.rect_again)
+        self.screen.blit(self.img_over, self.rect_over)
+
+        # 显示总分
+        score_font = pygame.font.Font("./STCAIYUN.ttf", 50)
+        image = score_font.render("SCORE:" + str(int(SCORE)), True, color_gray)
+        rect = image.get_rect()
+        rect.centerx, rect.bottom = SCREEN_RECT.centerx, self.rect_again.top - 20
+        self.screen.blit(image, rect)
+
+        # 显示击杀统计
+        stats_font = pygame.font.Font("./STCAIYUN.ttf", 30)
+        y_offset = self.rect_again.top - 100
+        for enemy_type, count in kill_stats.items():
+            stats_image = stats_font.render(f"{enemy_type}: {count}", True, color_gray)
+            stats_rect = stats_image.get_rect()
+            stats_rect.centerx, stats_rect.top = SCREEN_RECT.centerx, y_offset
+            self.screen.blit(stats_image, stats_rect)
+            y_offset -= 40
+
+    def set_stats(self, stats):
+        global kill_stats
+        kill_stats = stats
