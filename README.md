@@ -60,11 +60,11 @@
  ---- | -----   
  pygame.display.set_mode()  | 初始化游戏显示窗口 
  pygame.display.update()  | 刷新屏幕内容显示，稍后使用 
+set_mode(resolution=(0,0), flags=0, depth=0) -> Surface
+* resolution参数是一个二元组，表示宽和高。flags 参数是附件选项的集合。depth参数表示使用的颜色深度。
+* 返回的 Surface对象可以像常规的Surface对象那样去绘制，但发生的改变最终会显示到屏幕上。
+* 如果没有传入resolution 参数，或者使用默认设置(0, 0)，且Pygame使用SDL1.2.10以上版本，那么创建出来的Surface对象将与当前屏幕用户一样的分辨率。如果只有宽或高其中一项被设置为0，那么Surface对象将使用屏幕分辨率的宽或高代替它。
 
- 表头  | 表头  | 表头
- ---- | ----- | ------  
- 单元格内容  | 单元格内容 | 单元格内容 
- 单元格内容  | 单元格内容 | 单元格内容 
 
 
 ### 三级标题  
