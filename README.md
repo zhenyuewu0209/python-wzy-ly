@@ -56,10 +56,10 @@
 要描述一个矩形区域需要四个变量，分别是起始点的坐标(x,y)和矩形框的宽度和高度(width,length)。pygame专门提供了一个对象pygame.Rect用于描述矩形区域——Rect(x, y, width, height) -> Rect
 ![Uploading image.png…]()
 ## 3 创建游戏主窗口
-方法  | 说明  | 
- ---- | ----- | ------  
- pygame.display.set_mode()  | 初始化游戏显示窗口 | 
- pygame.display.update()  | 刷新屏幕内容显示，稍后使用 | 
+方法  | 说明  
+ ---- | -----   
+ pygame.display.set_mode()  | 初始化游戏显示窗口 
+ pygame.display.update()  | 刷新屏幕内容显示，稍后使用 
 
  表头  | 表头  | 表头
  ---- | ----- | ------  
