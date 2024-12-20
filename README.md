@@ -153,13 +153,88 @@ set_mode(resolution=(0,0), flags=0, depth=0) -> Surface
 * 变量score用来记录游戏过程积攒的分数
 * color_***是血条的颜色设置，不同类型的敌人、常规血量的操作者以及低血量的操作者有不同的血条颜色
 * FRAME_PER_SEC是规定的帧率（图1）  
-
-
 ![image](https://github.com/user-attachments/assets/94e12c3f-205f-471d-9ebc-1d6a283536a1)
+定义了一些事件常量，每个常量对应一个数值，在main程序中按需求被调用  
 ![image](https://github.com/user-attachments/assets/f58ac8ba-94d4-4f61-946d-7a85c998b40b)
+定义了GameScore这个类，该类继承自object（一般如果未说明都默认继承object），类里面定义了它的属性和方法
+![image](https://github.com/user-attachments/assets/aae1445a-df0b-40d4-8beb-ef3b760b8461)  
+定义了GameSprite这个类，该类继承自pygame.sprite.Sprite，除了pygame.sprite.Sprite自带的属性和方法，GameSprite还定义了游戏中涉及的参数属性和update这个方法，后面定义的子类都会以GameSprite为父类进行派生。  
+![image](https://github.com/user-attachments/assets/5c73050b-97d3-4cc6-8038-416701be075f)
+![image](https://github.com/user-attachments/assets/7dc430e6-ee97-4203-98c9-ebffd1d708de)  
+定义了游戏背景这个精灵，继承父类的初始化和更新方法，同时规定了图片的交替规则，即当y大于屏幕尺寸时，将其值设置到屏幕上方  
+![image](https://github.com/user-attachments/assets/11b8edcf-f7c5-4196-a3f1-85f10863598f)
+![image](https://github.com/user-attachments/assets/6fc6bbc9-00c3-4135-87e5-c06ce5268bb4)  
+定义了BOSS的精灵，其中包含图片、音乐、位置、爆炸状态等；定义了一系列的帧，分别用来控制子弹的发射、BOSS的移动和爆炸画面  
+![image](https://github.com/user-attachments/assets/45d06262-571b-423d-b443-dce4b80904cc)
+![image](https://github.com/user-attachments/assets/d6fe9428-1fb1-47be-8187-11f8ed9a7613)    
+BOSS的移动逻辑是左右移动，上下固定，每向一边移动固定的帧之后向另一边移动；BOSS的子弹每层5个，中间一个在x轴上固定不动，其他四个根据j的值分配不同的横向速度。
+![image](https://github.com/user-attachments/assets/9fe95356-556f-4995-8a9d-cd3d148aa5af)
+![image](https://github.com/user-attachments/assets/32afb4d1-a752-4865-b46a-2cc52df0abf3)  
+定义敌机的精灵，敌机分为两种，有参数，默认为1（初始敌机）  
+![image](https://github.com/user-attachments/assets/24bb693c-79ca-4762-8dcd-f535f4a99e7e)
+![image](https://github.com/user-attachments/assets/09b47313-1d68-473b-a082-a9d771cb17bf)  
+和BOSS不同，敌机是上下移动的，因此需要定义这方面的逻辑，不同的敌机初始速度不同，敌机一号不会发射子弹，敌机二号需要定义子弹的逻辑。同时敌机一号和二号都需要判断其是否飞出屏幕，是则消除。isboom不是判断是否爆炸，它是用来判断是否扣血以及作为爆炸需要满足的前置条件之一。
+![image](https://github.com/user-attachments/assets/afad7e23-672e-455a-b15b-15f271250f30)
+![image](https://github.com/user-attachments/assets/650caf5d-36a6-424a-b1e1-9cfc56b2e791)
+![image](https://github.com/user-attachments/assets/ff260090-745b-4f3f-b3ab-4dcf3773fa4a)  
+Hero即玩家精灵的设计，和BOSS、enemy一样首先定义了部分属性，如加载的图片、播放的音乐、血条等，不同的是引入了子弹buff和炸弹buff。玩家接收到子弹buff一到三次会增加同一时间发射的子弹数（需要调整子弹的分布逻辑）；第四次会改变子弹类型，更换贴图，伤害变为2；第五次会增加两架僚机。接收到炸弹会显示在游戏界面左侧，最多可以保留7个
+![image](https://github.com/user-attachments/assets/79460f71-c478-4427-95e9-759732b676ca)
+![image](https://github.com/user-attachments/assets/1d66864b-6b9a-47f5-8507-36cdbd515aef)  
+僚机的精灵
+![image](https://github.com/user-attachments/assets/8da07820-88e9-4e53-a281-b548754c9a22)
+![image](https://github.com/user-attachments/assets/4dcb3b73-cb9f-4f14-95a2-c015a86f505d)  
+定义子弹的精灵，BOSS和enemy和Hero的bullet在类中定义后都被加到Bullet类中。BOSS等发射的子弹是Bullet这个类的对象。（color在本段和其他段的定义不同）
+![image](https://github.com/user-attachments/assets/26590476-918e-411b-a4a0-e66892e0d28e)
+![image](https://github.com/user-attachments/assets/1c235c6d-3e54-436f-aa7e-ea43e576dda0)  
+Buff1、Buff2和Buff3，这里的Buff是一个实际对象。拾取到Buff之后获得的增益以及增益效果是在Hero类和main函数中定义的，Buff1/2/3是定义了子弹/炸弹/医疗包的贴图、随即发生、运动逻辑和存续时间。Buff2和Buff3通过Hero血条区分，实际只有贴图和存在时间有差别。
+![image](https://github.com/user-attachments/assets/ac464537-dbe8-4d31-a63b-b761fb4d5ce2)
+![image](https://github.com/user-attachments/assets/55a58987-d5ff-4cc5-8ead-e4f8060cfc50)
+![image](https://github.com/user-attachments/assets/6bd5fb6a-11d4-46f3-b094-5f0ae9eadf74)  
+bloodline主要是定义了一些属性和通过逻辑区分血条的颜色（不同长度（血量）时颜色不同）
+![image](https://github.com/user-attachments/assets/e7dbc5f0-72cf-473e-8c5b-b89e89c9fd2f)  
+绘制结束界面。第一段将again和gameover的贴图绘制在频幕上；第二段是用来判断人机交互的，当鼠标点击到一定范围内返回1或0，这里的1或0会传递到main函数中，用来决定是否重新开始游戏；第三段是使用pygame内部的文字包，以固定字体、大小绘制“score”，再将“score”文字转变为图像绘制到指定区域。
+![image](https://github.com/user-attachments/assets/8341b3b2-57a0-4769-a548-488bfed15b93)
+![image](https://github.com/user-attachments/assets/7bff4c8a-c34c-42c3-8d70-0ba4779f8035)
+![image](https://github.com/user-attachments/assets/05ce936f-0565-4195-bd94-a45ea00de678)  
+### main文件
+主函数只定义了一个PlaneGame类，游戏过程中的操作和参数都是通过调用其属性和方法实现的。  
+![image](https://github.com/user-attachments/assets/c07224fb-ca96-4491-af2b-76ac3f736de4)  
+self.clock = pygame.time.Clock()创建了一个时钟，通过后面代码赋予参数被设定为60帧/秒。  
+set_timer() 方法会每隔这个时间间隔触发一次 CREATE_ENEMY_EVENT 事件。 
+![image](https://github.com/user-attachments/assets/c178ce4a-21ce-4857-ad8d-639ad0526610)
+![image](https://github.com/user-attachments/assets/07a163c1-b607-4376-9380-b0857ace3482)  
+定义了一系列的精灵组，方便在游戏进程中进行统一管理，在游戏结束后其中的数据会被清楚，释放所占用的内存空间。（在 Pygame 中，精灵组（pygame.sprite.Group） 是一个 容器，它用于 存储和管理多个精灵对象（pygame.sprite.Sprite））  
+![image](https://github.com/user-attachments/assets/45563c09-fd85-4ddf-8baa-1b612a7b0a1d)
+![image](https://github.com/user-attachments/assets/9e7c6b45-6cf2-41f4-9ad5-4e2516830ed6)  
+定义了一个对象用来启动游戏，调用了多个方法事件监听、碰撞检测等  
+![image](https://github.com/user-attachments/assets/9c26fe4c-0bb9-44c7-9a8a-8e76291f521a)
+![image](https://github.com/user-attachments/assets/961734bd-d45a-42b2-9669-74e8b49ed60d)  
+事件监测，对一系列事件并列检测，事件中又含有分支和循环。玩家静止时坐标系是不变的，即静止的，通过操控键盘，以5为单位改变坐标（玩家飞机是没有速度的）。 
+![image](https://github.com/user-attachments/assets/194a11eb-659e-46a2-8841-996f60a428b1)
+![image](https://github.com/user-attachments/assets/e357ef95-5ba7-447d-89b0-fdef484488d5)
+![image](https://github.com/user-attachments/assets/ca27ca92-cc28-4a06-a570-8f00b6c4d04b)
+![image](https://github.com/user-attachments/assets/ee608115-2c42-446b-8d41-76fd65759d7d)
+![image](https://github.com/user-attachments/assets/91dc2c0c-7b41-4d2a-a36c-b67889a4c8cc)
+![image](https://github.com/user-attachments/assets/c91212ed-6e80-4dec-844b-92792637eb39)  
+炸弹使用后的功能定义：对于非BOSS的敌人直接扣除血量，对于BOSS扣除20滴。  
+![image](https://github.com/user-attachments/assets/c0337810-c191-418e-a35e-3dfba228597a)  
+碰撞检测，分为有害和有利碰撞检测。飞机与子弹、飞机与飞机之间的碰撞属于有害碰撞，根据碰撞对象的不同扣除不同的血量；玩家飞机与buff碰撞属于有利碰撞，根据飞机状态不同和拾取的buff不同，获得的增益不同。核心是使用了pygame.sprite.collide_mask方法。  
+![image](https://github.com/user-attachments/assets/f1a9e7bb-0661-4654-8f18-1e19935f2ea4)
+![image](https://github.com/user-attachments/assets/6be30557-839a-4114-bee0-3be1217872d0)  
+定义了僚机的显示设置  
+![image](https://github.com/user-attachments/assets/f9cb249e-8a98-47f2-bdac-9e019369802f)
+对前面调用的更新方法做了定义，再次调用了sprites中的定义  
+![image](https://github.com/user-attachments/assets/0784365b-8a67-4dbf-b5da-1f377286f312)
+![image](https://github.com/user-attachments/assets/d6065b1b-2601-4028-9b10-7b7095784e4c)  
+对玩家飞机范围作出限制；设置了部分游戏界面  
+![image](https://github.com/user-attachments/assets/b0b6c74e-f1f2-431b-9004-b09a53eef083)
+![image](https://github.com/user-attachments/assets/cd522c29-a140-4a8d-87b0-b6224e11c12a)
+![image](https://github.com/user-attachments/assets/33b5de8f-568c-4dbb-b4ab-1325fa19b4ed)  
+静态方法
+* @staticmethod 是 Python 中的一个装饰器，表示该方法是 静态方法。
+* 静态方法与实例方法不同，它不需要访问类的实例（不需要 self 参数），可以直接通过类调用。
+* 静态方法通常用于执行不依赖于实例属性和方法的功能。它是属于类的，而不是类的实例。
+![image](https://github.com/user-attachments/assets/33bd5bf4-8d68-4744-9216-578ac851b41f)
+## 总结  
 
-### 三级标题  
-#### 四级标题  
-##### 五级标题  
-###### 六级标题 
   
