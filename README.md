@@ -88,8 +88,8 @@ set_mode(resolution=(0,0), flags=0, depth=0) -> Surface
 * 保证游戏不会直接退出
 * 检测用户交互 —— 按键、鼠标等...
 * 变化图像位置 —— 动画效果  
-* 每隔0.0167秒移动一下所有图像的位置  
-* 调用 pygame.display.update()更新屏幕显示
+* * 每隔0.0167秒移动一下所有图像的位置  
+* * 调用 pygame.display.update()更新屏幕显示
   
 游戏时钟
 * pygame专门提供了一个对象pygame.time.Clock可以非常方便的设置屏幕绘制速度——刷新帧率
