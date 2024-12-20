@@ -71,7 +71,7 @@ set_mode(resolution=(0,0), flags=0, depth=0) -> Surface
 * 使用pygame.image.load()加载图像的数据
 * 使用游戏屏幕对象，调用blit方法将图像绘制到指定位置
 * 调用pygame.display.update()方法更新整个屏幕的显示
-  ![Uploading image.png…]()  
+  
 透明图像
 * png格式的图像是支持透明的
 * 在绘制图像时，透明区域不会显示任何内容
