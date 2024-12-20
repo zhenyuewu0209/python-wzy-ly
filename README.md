@@ -91,16 +91,15 @@ set_mode(resolution=(0,0), flags=0, depth=0) -> Surface
   * 每隔0.0167秒移动一下所有图像的位置
   * 调用 pygame.display.update()更新屏幕显示  
 
-  
 游戏时钟
 * pygame专门提供了一个对象pygame.time.Clock可以非常方便的设置屏幕绘制速度——刷新帧率
 * 要使用时钟对象需要两步：
-*  * 1）在游戏初始化创建一个时钟对象
-* * 2）在游戏循环中让时钟对象调用tick(帧率)方法
-tick 方法会根据上次被调用的时间，自动设置游戏循环中的延时
-* FPS=60
-* FPSClock=pygame.time.Clock()
-* FPSClock.tick(FPS)
+  * 1）在游戏初始化创建一个时钟对象
+  * 2）在游戏循环中让时钟对象调用tick(帧率)方法
+    * tick 方法会根据上次被调用的时间，自动设置游戏循环中的延时
+  * FPS=60
+  * FPSClock=pygame.time.Clock()
+  * FPSClock.tick(FPS)
 
 ## 5 游戏中的动画实现原理
 事件event
