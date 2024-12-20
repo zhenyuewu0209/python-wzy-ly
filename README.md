@@ -9,15 +9,19 @@
 **music**文件夹：存储游戏中的音乐特效;  
 **plane_main.py**:游戏的操作主体python文件，包括各种人机交互功能、游戏数值数组调用等，主要功能是动态使用sprites中的方法和属性;  
 **plane_sprites.py**:游戏中各项数值、图形界面,主要用于游戏的静态属性设置;  
-## 项目运行配置
+## 项目运行配置  
+本项目基于python3.7，主要使用pygame库开发游戏，还包含sys、random两个内部依赖。
 首先，在此我们需要再次回顾python、pycharm和anaconda之间的关系。  
 * python是开发软件或机器学习等需要使用的一种跨平台的计算机程序语言。  
 * PyCharm是一种常用的Python IDE，带有一整套可以帮助用户在使用Python语言开发时提高其效率的工具，比如调试、语法高亮、Project管理、代码跳转、智能提示、自动完成、单元测试、版本控制，简单来说就是将python的各种功能界面化、图形化。  
 * Anaconda指的是一个开源的Python发行版本，简单来说anaconda是一个可以定义python版本的虚拟环境构建软件，其本身就包含有部分常用的开发依赖模块，也可以在其中继续更新所需的依赖项。  
-本项目基于python3.7，主要使用pygame库开发游戏，还包含sys、random两个内部依赖。  
+
 准备工作：
 * 一、下载anaconda并创建anaconda虚拟环境，相关操作主要参考以下这篇csdn文章https://blog.csdn.net/qq_45160840/article/details/127127610?sharetype=blogdetail&shareId=127127610&sharerefer=APP&sharesource=weixin_74969505&sharefrom=qq
 * 二、通过pycharm终端命令行安装外部依赖pygame，命令语句：pip install pygame(==***)
+
+
+
 ## 项目需求分析
 项目基本要求：  
 * 本项目是基于GUI交互的飞机大战游戏，首先作为一款游戏需要有对应的游戏界面，这里需要考虑到如何设置游戏窗口的分辨率，如何在打开的窗口上绘制坐标系，从而对游戏界面的细节设置（例如开始键、推出键等固定位置图标的确认）。
